@@ -45,8 +45,8 @@ rootProject.name = 'baritone'
 include("common")
 include("tweaker")
 if (System.getProperty("Baritone.enabled_platforms") == null) {
-    System.setProperty("Baritone.enabled_platforms", "fabric,forge")
+    System.setProperty("Baritone.enabled_platforms", "fabric,")
 }
 for (platform in System.getProperty("Baritone.enabled_platforms").split(",")) {
-       include(platform)
+    include(platform)
 }

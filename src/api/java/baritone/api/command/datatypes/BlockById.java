@@ -19,10 +19,11 @@ package baritone.api.command.datatypes;
 
 import baritone.api.command.exception.CommandException;
 import baritone.api.command.helpers.TabCompleteHelper;
-import java.util.stream.Stream;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
+
+import java.util.stream.Stream;
 
 public enum BlockById implements IDatatypeFor<Block> {
     INSTANCE;

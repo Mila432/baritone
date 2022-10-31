@@ -21,9 +21,10 @@ import baritone.api.cache.IWorldScanner;
 import baritone.api.command.ICommand;
 import baritone.api.command.ICommandSystem;
 import baritone.api.schematic.ISchematicSystem;
+import net.minecraft.client.player.LocalPlayer;
+
 import java.util.List;
 import java.util.Objects;
-import net.minecraft.client.player.LocalPlayer;
 
 /**
  * Provides the present {@link IBaritone} instances, as well as non-baritone instance related APIs.

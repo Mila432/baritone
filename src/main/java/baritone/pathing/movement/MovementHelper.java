@@ -18,13 +18,12 @@
 package baritone.pathing.movement;
 
 import baritone.Baritone;
-import baritone.altoclef.AltoClefSettings;
 import baritone.api.BaritoneAPI;
 import baritone.api.IBaritone;
 import baritone.api.pathing.movement.ActionCosts;
 import baritone.api.pathing.movement.MovementStatus;
-import baritone.api.utils.*;
 import baritone.api.utils.Rotation;
+import baritone.api.utils.*;
 import baritone.api.utils.input.Input;
 import baritone.pathing.movement.MovementState.MovementTarget;
 import baritone.utils.BlockStateInterface;
@@ -37,16 +36,12 @@ import net.minecraft.world.level.block.piston.MovingPistonBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.SlabType;
-import net.minecraft.world.level.material.FlowingFluid;
-import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.material.FluidState;
-import net.minecraft.world.level.material.Fluids;
-import net.minecraft.world.level.material.WaterFluid;
+import net.minecraft.world.level.material.*;
 import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import java.util.List;
+
 import java.util.Optional;
 
 import static baritone.pathing.movement.Movement.HORIZONTALS_BUT_ALSO_DOWN_____SO_EVERY_DIRECTION_EXCEPT_UP;
@@ -59,7 +54,6 @@ import static baritone.pathing.movement.Movement.HORIZONTALS_BUT_ALSO_DOWN_____S
 public interface MovementHelper extends ActionCosts, Helper {
 
     static boolean avoidBreaking(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
-        if (AltoClefSettings.getInstance().shouldAvoidBreaking(new BlockPos(x, y, z))) return true;
         if (!bsi.worldBorder.canPlaceAt(x, y)) {
             return true;
         }
@@ -319,8 +313,6 @@ public interface MovementHelper extends ActionCosts, Helper {
      * @return Whether or not the specified block can be walked on
      */
     static boolean canWalkOn(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
-        if (AltoClefSettings.getInstance().canWalkOnForce(x, y, z)) return true;
-        if (AltoClefSettings.getInstance().shouldAvoidWalkThroughForce(x, y+1, z)) return false;
         Block block = state.getBlock();
         if (block instanceof AirBlock || block == Blocks.MAGMA_BLOCK || block == Blocks.BUBBLE_COLUMN || block == Blocks.HONEY_BLOCK) {
             // early return for most common case (air)
@@ -370,10 +362,6 @@ public interface MovementHelper extends ActionCosts, Helper {
             }
             return true;
         }
-        // Extra blocks we may want to walk on.
-        if (block == Blocks.END_PORTAL_FRAME) {
-            return true;
-        }
         return block instanceof StairBlock;
     }
 
@@ -406,7 +394,6 @@ public interface MovementHelper extends ActionCosts, Helper {
     }
 
     static boolean canPlaceAgainst(BlockStateInterface bsi, int x, int y, int z, BlockState state) {
-        if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(x, y, z)) return false;
         if (!bsi.worldBorder.canPlaceAt(x, z)) {
             return false;
         }
@@ -435,9 +422,6 @@ public interface MovementHelper extends ActionCosts, Helper {
             }
             double strVsBlock = context.toolSet.getStrVsBlock(state);
             if (strVsBlock <= 0) {
-                return COST_INF;
-            }
-            if (AltoClefSettings.getInstance().shouldAvoidBreaking(x, y, z)) {
                 return COST_INF;
             }
             double result = 1 / strVsBlock;

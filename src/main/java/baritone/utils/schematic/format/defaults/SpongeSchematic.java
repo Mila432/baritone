@@ -20,17 +20,18 @@ package baritone.utils.schematic.format.defaults;
 import baritone.utils.schematic.StaticSchematic;
 import baritone.utils.type.VarInt;
 import it.unimi.dsi.fastutil.ints.Int2ObjectArrayMap;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import net.minecraft.core.Registry;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author Brady
@@ -104,19 +105,13 @@ public final class SpongeSchematic extends StaticSchematic {
             this.properties = properties;
         }
 
-        private BlockState deserialize() {
-            if (this.blockState == null) {
-                Block block = Registry.BLOCK.get(this.resourceLocation);
-                this.blockState = block.defaultBlockState();
-
-                this.properties.keySet().stream().sorted(String::compareTo).forEachOrdered(key -> {
-                    Property<?> property = block.getStateDefinition().getProperty(key);
-                    if (property != null) {
-                        this.blockState = setPropertyValue(this.blockState, property, this.properties.get(key));
-                    }
-                });
+        private static <T extends Comparable<T>> BlockState setPropertyValue(BlockState state, Property<T> property, String value) {
+            Optional<T> parsed = property.getValue(value);
+            if (parsed.isPresent()) {
+                return state.setValue(property, parsed.get());
+            } else {
+                throw new IllegalArgumentException("Invalid value for property " + property);
             }
-            return this.blockState;
         }
 
         private static SerializedBlockState getFromString(String s) {
@@ -145,13 +140,19 @@ public final class SpongeSchematic extends StaticSchematic {
             }
         }
 
-        private static <T extends Comparable<T>> BlockState setPropertyValue(BlockState state, Property<T> property, String value) {
-            Optional<T> parsed = property.getValue(value);
-            if (parsed.isPresent()) {
-                return state.setValue(property, parsed.get());
-            } else {
-                throw new IllegalArgumentException("Invalid value for property " + property);
+        private BlockState deserialize() {
+            if (this.blockState == null) {
+                Block block = Registry.BLOCK.get(this.resourceLocation);
+                this.blockState = block.defaultBlockState();
+
+                this.properties.keySet().stream().sorted(String::compareTo).forEachOrdered(key -> {
+                    Property<?> property = block.getStateDefinition().getProperty(key);
+                    if (property != null) {
+                        this.blockState = setPropertyValue(this.blockState, property, this.properties.get(key));
+                    }
+                });
             }
+            return this.blockState;
         }
     }
 }

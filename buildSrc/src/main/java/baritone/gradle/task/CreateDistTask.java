@@ -21,11 +21,8 @@ import org.gradle.api.tasks.TaskAction;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,6 +35,34 @@ import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 public class CreateDistTask extends BaritoneGradleTask {
 
     private static MessageDigest SHA1_DIGEST;
+
+    private static final byte[] HEX_ARRAY = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
+
+    private static String getFileName(Path p) {
+        return p.getFileName().toString();
+    }
+
+    private static synchronized String sha1(Path path) {
+        try {
+            if (SHA1_DIGEST == null) {
+                SHA1_DIGEST = MessageDigest.getInstance("SHA-1");
+            }
+            return bytesToHex(SHA1_DIGEST.digest(Files.readAllBytes(path))).toLowerCase();
+        } catch (Exception e) {
+            // haha no thanks
+            throw new IllegalStateException(e);
+        }
+    }
+
+    public static String bytesToHex(byte[] bytes) {
+        byte[] hexChars = new byte[bytes.length * 2];
+        for (int j = 0; j < bytes.length; j++) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+        }
+        return new String(hexChars, StandardCharsets.UTF_8);
+    }
 
     @TaskAction
     protected void exec() throws Exception {
@@ -70,33 +95,5 @@ public class CreateDistTask extends BaritoneGradleTask {
 
         // Write the checksums to a file
         Files.write(getRootRelativeFile("dist/checksums.txt"), shasum);
-    }
-
-    private static String getFileName(Path p) {
-        return p.getFileName().toString();
-    }
-
-    private static synchronized String sha1(Path path) {
-        try {
-            if (SHA1_DIGEST == null) {
-                SHA1_DIGEST = MessageDigest.getInstance("SHA-1");
-            }
-            return bytesToHex(SHA1_DIGEST.digest(Files.readAllBytes(path))).toLowerCase();
-        } catch (Exception e) {
-            // haha no thanks
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private static final byte[] HEX_ARRAY = "0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII);
-
-    public static String bytesToHex(byte[] bytes) {
-        byte[] hexChars = new byte[bytes.length * 2];
-        for (int j = 0; j < bytes.length; j++) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
-        }
-        return new String(hexChars, StandardCharsets.UTF_8);
     }
 }

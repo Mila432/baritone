@@ -18,7 +18,6 @@
 package baritone.gradle.task;
 
 import org.gradle.api.DefaultTask;
-import org.gradle.api.tasks.Input;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,25 +33,25 @@ import java.nio.file.Paths;
 class BaritoneGradleTask extends DefaultTask {
 
     protected static final String
-            PROGUARD_ZIP                    = "proguard.zip",
-            PROGUARD_JAR                    = "proguard.jar",
-            PROGUARD_CONFIG_TEMPLATE        = "scripts/proguard.pro",
-            PROGUARD_CONFIG_DEST            = "template.pro",
-            PROGUARD_API_CONFIG             = "api.pro",
-            PROGUARD_STANDALONE_CONFIG      = "standalone.pro",
-            PROGUARD_EXPORT_PATH            = "proguard_out.jar",
-            PROGUARD_MAPPING_DIR            = "mapping",
+            PROGUARD_ZIP = "proguard.zip",
+            PROGUARD_JAR = "proguard.jar",
+            PROGUARD_CONFIG_TEMPLATE = "scripts/proguard.pro",
+            PROGUARD_CONFIG_DEST = "template.pro",
+            PROGUARD_API_CONFIG = "api.pro",
+            PROGUARD_STANDALONE_CONFIG = "standalone.pro",
+            PROGUARD_EXPORT_PATH = "proguard_out.jar",
+            PROGUARD_MAPPING_DIR = "mapping",
 
-            ARTIFACT_STANDARD           = "%s-%s.jar",
-            ARTIFACT_UNOPTIMIZED        = "%s-unoptimized-%s.jar",
-            ARTIFACT_API                = "%s-api-%s.jar",
-            ARTIFACT_STANDALONE         = "%s-standalone-%s.jar";
+    ARTIFACT_STANDARD = "%s-%s.jar",
+            ARTIFACT_UNOPTIMIZED = "%s-unoptimized-%s.jar",
+            ARTIFACT_API = "%s-api-%s.jar",
+            ARTIFACT_STANDALONE = "%s-standalone-%s.jar";
 
     protected String artifactName, artifactVersion;
     protected final Path
-        artifactPath,
-        artifactUnoptimizedPath, artifactApiPath, artifactStandalonePath, // these are different for forge builds
-        proguardOut;
+            artifactPath,
+            artifactUnoptimizedPath, artifactApiPath, artifactStandalonePath, // these are different for forge builds
+            proguardOut;
 
     public BaritoneGradleTask() {
         this.artifactName = getProject().getProperties().get("archivesBaseName").toString();
@@ -61,8 +60,8 @@ class BaritoneGradleTask extends DefaultTask {
         this.artifactPath = this.getBuildFile(formatVersion(ARTIFACT_STANDARD));
 
         this.artifactUnoptimizedPath = this.getBuildFile(formatVersion(ARTIFACT_UNOPTIMIZED));
-        this.artifactApiPath         = this.getBuildFile(formatVersion(ARTIFACT_API));
-        this.artifactStandalonePath  = this.getBuildFile(formatVersion(ARTIFACT_STANDALONE));
+        this.artifactApiPath = this.getBuildFile(formatVersion(ARTIFACT_API));
+        this.artifactStandalonePath = this.getBuildFile(formatVersion(ARTIFACT_STANDALONE));
 
         this.proguardOut = this.getTemporaryFile(PROGUARD_EXPORT_PATH);
     }

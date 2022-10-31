@@ -28,11 +28,12 @@ import baritone.pathing.movement.MovementHelper;
 import baritone.pathing.movement.MovementState;
 import baritone.utils.BlockStateInterface;
 import com.google.common.collect.ImmutableSet;
-import java.util.Set;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FallingBlock;
 import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.Set;
 
 public class MovementAscend extends Movement {
 
@@ -51,17 +52,6 @@ public class MovementAscend extends Movement {
     @Override
     public double calculateCost(CalculationContext context) {
         return cost(context, src.x, src.y, src.z, dest.x, dest.z);
-    }
-
-    @Override
-    protected Set<BetterBlockPos> calculateValidPositions() {
-        BetterBlockPos prior = new BetterBlockPos(src.subtract(getDirection()).above()); // sometimes we back up to place the block, also sprint ascends, also skip descend to straight ascend
-        return ImmutableSet.of(src,
-                src.above(),
-                dest,
-                prior,
-                prior.above()
-        );
     }
 
     public static double cost(CalculationContext context, int x, int y, int z, int destX, int destZ) {
@@ -152,6 +142,17 @@ public class MovementAscend extends Movement {
         }
         totalCost += MovementHelper.getMiningDurationTicks(context, destX, y + 2, destZ, true);
         return totalCost;
+    }
+
+    @Override
+    protected Set<BetterBlockPos> calculateValidPositions() {
+        BetterBlockPos prior = new BetterBlockPos(src.subtract(getDirection()).above()); // sometimes we back up to place the block, also sprint ascends, also skip descend to straight ascend
+        return ImmutableSet.of(src,
+                src.above(),
+                dest,
+                prior,
+                prior.above()
+        );
     }
 
     @Override

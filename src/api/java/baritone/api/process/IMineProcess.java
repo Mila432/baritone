@@ -19,8 +19,9 @@ package baritone.api.process;
 
 import baritone.api.utils.BlockOptionalMeta;
 import baritone.api.utils.BlockOptionalMetaLookup;
-import java.util.stream.Stream;
 import net.minecraft.world.level.block.Block;
+
+import java.util.stream.Stream;
 
 /**
  * @author Brady

@@ -30,9 +30,6 @@ import baritone.pathing.movement.MovementHelper;
 import baritone.pathing.movement.MovementState;
 import baritone.pathing.movement.MovementState.MovementTarget;
 import baritone.utils.pathing.MutableMoveResult;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -46,6 +43,10 @@ import net.minecraft.world.level.block.LadderBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.WaterFluid;
 import net.minecraft.world.phys.Vec3;
+
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 
 public class MovementFall extends Movement {
 
@@ -66,6 +67,24 @@ public class MovementFall extends Movement {
         return result.cost;
     }
 
+    private static BetterBlockPos[] buildPositionsToBreak(BetterBlockPos src, BetterBlockPos dest) {
+        BetterBlockPos[] toBreak;
+        int diffX = src.getX() - dest.getX();
+        int diffZ = src.getZ() - dest.getZ();
+        int diffY = Math.abs(src.getY() - dest.getY());
+        toBreak = new BetterBlockPos[diffY + 2];
+        for (int i = 0; i < toBreak.length; i++) {
+            toBreak[i] = new BetterBlockPos(src.getX() - diffX, src.getY() + 1 - i, src.getZ() - diffZ);
+        }
+        return toBreak;
+    }
+
+    private boolean willPlaceBucket() {
+        CalculationContext context = new CalculationContext(baritone);
+        MutableMoveResult result = new MutableMoveResult();
+        return MovementDescend.dynamicFallCost(context, src.x, src.y, src.z, dest.x, dest.z, 0, context.get(dest.x, src.y - 2, dest.z), result);
+    }
+
     @Override
     protected Set<BetterBlockPos> calculateValidPositions() {
         Set<BetterBlockPos> set = new HashSet<>();
@@ -74,12 +93,6 @@ public class MovementFall extends Movement {
             set.add(dest.above(y));
         }
         return set;
-    }
-
-    private boolean willPlaceBucket() {
-        CalculationContext context = new CalculationContext(baritone);
-        MutableMoveResult result = new MutableMoveResult();
-        return MovementDescend.dynamicFallCost(context, src.x, src.y, src.z, dest.x, dest.z, 0, context.get(dest.x, src.y - 2, dest.z), result);
     }
 
     @Override
@@ -158,6 +171,13 @@ public class MovementFall extends Movement {
         return state;
     }
 
+    @Override
+    public boolean safeToCancel(MovementState state) {
+        // if we haven't started walking off the edge yet, or if we're in the process of breaking blocks before doing the fall
+        // then it's safe to cancel this
+        return ctx.playerFeet().equals(src) || state.getStatus() != MovementStatus.RUNNING;
+    }
+
     private Direction avoid() {
         for (int i = 0; i < 15; i++) {
             BlockState state = ctx.world().getBlockState(ctx.playerFeet().below(i));
@@ -166,25 +186,6 @@ public class MovementFall extends Movement {
             }
         }
         return null;
-    }
-
-    @Override
-    public boolean safeToCancel(MovementState state) {
-        // if we haven't started walking off the edge yet, or if we're in the process of breaking blocks before doing the fall
-        // then it's safe to cancel this
-        return ctx.playerFeet().equals(src) || state.getStatus() != MovementStatus.RUNNING;
-    }
-
-    private static BetterBlockPos[] buildPositionsToBreak(BetterBlockPos src, BetterBlockPos dest) {
-        BetterBlockPos[] toBreak;
-        int diffX = src.getX() - dest.getX();
-        int diffZ = src.getZ() - dest.getZ();
-        int diffY = Math.abs(src.getY() - dest.getY());
-        toBreak = new BetterBlockPos[diffY + 2];
-        for (int i = 0; i < toBreak.length; i++) {
-            toBreak[i] = new BetterBlockPos(src.getX() - diffX, src.getY() + 1 - i, src.getZ() - diffZ);
-        }
-        return toBreak;
     }
 
     @Override

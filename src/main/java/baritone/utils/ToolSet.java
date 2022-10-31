@@ -18,7 +18,6 @@
 package baritone.utils;
 
 import baritone.Baritone;
-import baritone.altoclef.AltoClefSettings;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
@@ -67,6 +66,36 @@ public class ToolSet {
     }
 
     /**
+     * Calculates how long would it take to mine the specified block given the best tool
+     * in this toolset is used. A negative value is returned if the specified block is unbreakable.
+     *
+     * @param item  the item to mine it with
+     * @param state the blockstate to be mined
+     * @return how long it would take in ticks
+     */
+    public static double calculateSpeedVsBlock(ItemStack item, BlockState state) {
+        float hardness = state.getDestroySpeed(null, null);
+        if (hardness < 0) {
+            return -1;
+        }
+
+        float speed = item.getDestroySpeed(state);
+        if (speed > 1) {
+            int effLevel = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.BLOCK_EFFICIENCY, item);
+            if (effLevel > 0 && !item.isEmpty()) {
+                speed += effLevel * effLevel + 1;
+            }
+        }
+
+        speed /= hardness;
+        if (!state.requiresCorrectToolForDrops() || (!item.isEmpty() && item.isCorrectToolForDrops(state))) {
+            return speed / 30;
+        } else {
+            return speed / 100;
+        }
+    }
+
+    /**
      * Using the best tool on the hotbar, how fast we can mine this block
      *
      * @param state the blockstate to be mined
@@ -93,10 +122,6 @@ public class ToolSet {
         }
     }
 
-    public boolean hasSilkTouch(ItemStack stack) {
-        return EnchantmentHelper.getItemEnchantmentLevel(Enchantments.SILK_TOUCH, stack) > 0;
-    }
-
     /**
      * Calculate which tool on the hotbar is best for mining, depending on an override setting,
      * related to auto tool movement cost, it will either return current selected slot, or the best slot.
@@ -107,6 +132,10 @@ public class ToolSet {
 
     public int getBestSlot(Block b, boolean preferSilkTouch) {
         return getBestSlot(b, preferSilkTouch, false);
+    }
+
+    public boolean hasSilkTouch(ItemStack stack) {
+        return EnchantmentHelper.getItemEnchantmentLevel(Enchantments.SILK_TOUCH, stack) > 0;
     }
 
     public int getBestSlot(Block b, boolean preferSilkTouch, boolean pathingCalculation) {
@@ -129,7 +158,7 @@ public class ToolSet {
             if (!Baritone.settings().useSwordToMine.value && itemStack.getItem() instanceof SwordItem) {
                 continue;
             }
-          
+
             if (Baritone.settings().itemSaver.value && (itemStack.getDamageValue() + Baritone.settings().itemSaverThreshold.value) >= itemStack.getMaxDamage() && itemStack.getMaxDamage() > 1) {
                 continue;
             }
@@ -154,6 +183,10 @@ public class ToolSet {
         return best;
     }
 
+    private double avoidanceMultiplier(Block b) {
+        return Baritone.settings().blocksToAvoidBreaking.value.contains(b) ? Baritone.settings().avoidBreakingMultiplier.value : 1;
+    }
+
     /**
      * Calculate how effectively a block can be destroyed
      *
@@ -163,43 +196,6 @@ public class ToolSet {
     private double getBestDestructionTime(Block b) {
         ItemStack stack = player.getInventory().getItem(getBestSlot(b, false, true));
         return calculateSpeedVsBlock(stack, b.defaultBlockState()) * avoidanceMultiplier(b);
-    }
-
-    private double avoidanceMultiplier(Block b) {
-        return Baritone.settings().blocksToAvoidBreaking.value.contains(b) ? Baritone.settings().avoidBreakingMultiplier.value : 1;
-    }
-
-    /**
-     * Calculates how long would it take to mine the specified block given the best tool
-     * in this toolset is used. A negative value is returned if the specified block is unbreakable.
-     *
-     * @param item  the item to mine it with
-     * @param state the blockstate to be mined
-     * @return how long it would take in ticks
-     */
-    public static double calculateSpeedVsBlock(ItemStack item, BlockState state) {
-        float hardness = state.getDestroySpeed(null, null);
-        if (hardness < 0) {
-            return -1;
-        }
-
-        float speed = item.getDestroySpeed(state);
-        if (speed > 1) {
-            int effLevel = EnchantmentHelper.getItemEnchantmentLevel(Enchantments.BLOCK_EFFICIENCY, item);
-            if (effLevel > 0 && !item.isEmpty()) {
-                speed += effLevel * effLevel + 1;
-            }
-        }
-        // We specify to force use this tool.
-        if (AltoClefSettings.getInstance().shouldForceUseTool(state, item)) {
-            return Double.POSITIVE_INFINITY;
-        }
-        speed /= hardness;
-        if (!state.requiresCorrectToolForDrops() || (!item.isEmpty() && item.isCorrectToolForDrops(state))) {
-            return speed / 30;
-        } else {
-            return speed / 100;
-        }
     }
 
     /**

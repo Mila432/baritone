@@ -39,18 +39,12 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.AirBlock;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.BonemealableBlock;
-import net.minecraft.world.level.block.CactusBlock;
-import net.minecraft.world.level.block.CropBlock;
-import net.minecraft.world.level.block.NetherWartBlock;
-import net.minecraft.world.level.block.SugarCaneBlock;
+import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -114,50 +108,6 @@ public final class FarmProcess extends BaritoneProcessHelper implements IFarmPro
         locations = null;
     }
 
-    private enum Harvest {
-        WHEAT((CropBlock) Blocks.WHEAT),
-        CARROTS((CropBlock) Blocks.CARROTS),
-        POTATOES((CropBlock) Blocks.POTATOES),
-        BEETROOT((CropBlock) Blocks.BEETROOTS),
-        PUMPKIN(Blocks.PUMPKIN, state -> true),
-        MELON(Blocks.MELON, state -> true),
-        NETHERWART(Blocks.NETHER_WART, state -> state.getValue(NetherWartBlock.AGE) >= 3),
-        SUGARCANE(Blocks.SUGAR_CANE, null) {
-            @Override
-            public boolean readyToHarvest(Level world, BlockPos pos, BlockState state) {
-                if (Baritone.settings().replantCrops.value) {
-                    return world.getBlockState(pos.below()).getBlock() instanceof SugarCaneBlock;
-                }
-                return true;
-            }
-        },
-        CACTUS(Blocks.CACTUS, null) {
-            @Override
-            public boolean readyToHarvest(Level world, BlockPos pos, BlockState state) {
-                if (Baritone.settings().replantCrops.value) {
-                    return world.getBlockState(pos.below()).getBlock() instanceof CactusBlock;
-                }
-                return true;
-            }
-        };
-        public final Block block;
-        public final Predicate<BlockState> readyToHarvest;
-
-        Harvest(CropBlock blockCrops) {
-            this(blockCrops, blockCrops::isMaxAge);
-            // max age is 7 for wheat, carrots, and potatoes, but 3 for beetroot
-        }
-
-        Harvest(Block block, Predicate<BlockState> readyToHarvest) {
-            this.block = block;
-            this.readyToHarvest = readyToHarvest;
-        }
-
-        public boolean readyToHarvest(Level world, BlockPos pos, BlockState state) {
-            return readyToHarvest.test(state);
-        }
-    }
-
     private boolean readyForHarvest(Level world, BlockPos pos, BlockState state) {
         for (Harvest harvest : Harvest.values()) {
             if (harvest.block == state.getBlock()) {
@@ -167,16 +117,12 @@ public final class FarmProcess extends BaritoneProcessHelper implements IFarmPro
         return false;
     }
 
-    private boolean isPlantable(ItemStack stack) {
-        return FARMLAND_PLANTABLE.contains(stack.getItem());
-    }
-
     private boolean isBoneMeal(ItemStack stack) {
         return !stack.isEmpty() && stack.getItem().equals(Items.BONE_MEAL);
     }
 
-    private boolean isNetherWart(ItemStack stack) {
-        return !stack.isEmpty() && stack.getItem().equals(Items.NETHER_WART);
+    private boolean isPlantable(ItemStack stack) {
+        return FARMLAND_PLANTABLE.contains(stack.getItem());
     }
 
     @Override
@@ -311,6 +257,54 @@ public final class FarmProcess extends BaritoneProcessHelper implements IFarmPro
             }
         }
         return new PathingCommand(new GoalComposite(goalz.toArray(new Goal[0])), PathingCommandType.SET_GOAL_AND_PATH);
+    }
+
+    private boolean isNetherWart(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem().equals(Items.NETHER_WART);
+    }
+
+    private enum Harvest {
+        WHEAT((CropBlock) Blocks.WHEAT),
+        CARROTS((CropBlock) Blocks.CARROTS),
+        POTATOES((CropBlock) Blocks.POTATOES),
+        BEETROOT((CropBlock) Blocks.BEETROOTS),
+        PUMPKIN(Blocks.PUMPKIN, state -> true),
+        MELON(Blocks.MELON, state -> true),
+        NETHERWART(Blocks.NETHER_WART, state -> state.getValue(NetherWartBlock.AGE) >= 3),
+        SUGARCANE(Blocks.SUGAR_CANE, null) {
+            @Override
+            public boolean readyToHarvest(Level world, BlockPos pos, BlockState state) {
+                if (Baritone.settings().replantCrops.value) {
+                    return world.getBlockState(pos.below()).getBlock() instanceof SugarCaneBlock;
+                }
+                return true;
+            }
+        },
+        CACTUS(Blocks.CACTUS, null) {
+            @Override
+            public boolean readyToHarvest(Level world, BlockPos pos, BlockState state) {
+                if (Baritone.settings().replantCrops.value) {
+                    return world.getBlockState(pos.below()).getBlock() instanceof CactusBlock;
+                }
+                return true;
+            }
+        };
+        public final Block block;
+        public final Predicate<BlockState> readyToHarvest;
+
+        Harvest(CropBlock blockCrops) {
+            this(blockCrops, blockCrops::isMaxAge);
+            // max age is 7 for wheat, carrots, and potatoes, but 3 for beetroot
+        }
+
+        Harvest(Block block, Predicate<BlockState> readyToHarvest) {
+            this.block = block;
+            this.readyToHarvest = readyToHarvest;
+        }
+
+        public boolean readyToHarvest(Level world, BlockPos pos, BlockState state) {
+            return readyToHarvest.test(state);
+        }
     }
 
     @Override

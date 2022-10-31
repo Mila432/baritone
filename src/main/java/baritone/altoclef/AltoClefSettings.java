@@ -1,3 +1,20 @@
+/*
+ * This file is part of Baritone.
+ *
+ * Baritone is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Baritone is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Baritone.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package baritone.altoclef;
 
 import net.minecraft.core.BlockPos;
@@ -16,47 +33,34 @@ public class AltoClefSettings {
 
     // woo singletons
     private static AltoClefSettings _instance = new AltoClefSettings();
+    private final Object breakMutex = new Object();
+    private final Object placeMutex = new Object();
+    private final Object propertiesMutex = new Object();
+    private final Object globalHeuristicMutex = new Object();
+    private final HashSet<BlockPos> _blocksToAvoidBreaking = new HashSet<>();
+    private final List<Predicate<BlockPos>> _breakAvoiders = new ArrayList<>();
+    private final List<Predicate<BlockPos>> _placeAvoiders = new ArrayList<>();
+    private final List<Predicate<BlockPos>> _forceCanWalkOn = new ArrayList<>();
+    private final List<Predicate<BlockPos>> _forceAvoidWalkThrough = new ArrayList<>();
+    private final List<BiPredicate<BlockState, ItemStack>> _forceUseTool = new ArrayList<>();
+    private final List<BiFunction<Double, BlockPos, Double>> _globalHeuristics = new ArrayList<>();
+    private final HashSet<Item> _protectedItems = new HashSet<>();
+    private boolean _allowFlowingWaterPass;
+    private boolean _pauseInteractions;
+    private boolean _dontPlaceBucketButStillFall;
+    private boolean _allowSwimThroughLava = false;
+    private boolean _treatSoulSandAsOrdinaryBlock = false;
+
     public static AltoClefSettings getInstance() {
         return _instance;
     }
-
-    private final Object breakMutex = new Object();
-    private final Object placeMutex = new Object();
-
-    private final Object propertiesMutex = new Object();
-
-    private final Object globalHeuristicMutex = new Object();
-
-    private final HashSet<BlockPos> _blocksToAvoidBreaking = new HashSet<>();
-    private final List<Predicate<BlockPos>> _breakAvoiders = new ArrayList<>();
-
-    private final List<Predicate<BlockPos>> _placeAvoiders = new ArrayList<>();
-
-    private final List<Predicate<BlockPos>> _forceCanWalkOn = new ArrayList<>();
-
-    private final List<Predicate<BlockPos>> _forceAvoidWalkThrough = new ArrayList<>();
-
-    private final List<BiPredicate<BlockState, ItemStack>> _forceUseTool = new ArrayList<>();
-
-    private final List<BiFunction<Double, BlockPos, Double>> _globalHeuristics = new ArrayList<>();
-
-    private final HashSet<Item> _protectedItems = new HashSet<>();
-
-    private boolean _allowFlowingWaterPass;
-
-    private boolean _pauseInteractions;
-
-    private boolean _dontPlaceBucketButStillFall;
-
-    private boolean _allowSwimThroughLava = false;
-
-    private boolean _treatSoulSandAsOrdinaryBlock = false;
 
     public void avoidBlockBreak(BlockPos pos) {
         synchronized (breakMutex) {
             _blocksToAvoidBreaking.add(pos);
         }
     }
+
     public void avoidBlockBreak(Predicate<BlockPos> avoider) {
         synchronized (breakMutex) {
             _breakAvoiders.add(avoider);
@@ -84,6 +88,7 @@ public class AltoClefSettings {
     public boolean shouldAvoidBreaking(int x, int y, int z) {
         return shouldAvoidBreaking(new BlockPos(x, y, z));
     }
+
     public boolean shouldAvoidBreaking(BlockPos pos) {
         synchronized (breakMutex) {
             if (_blocksToAvoidBreaking.contains(pos))
@@ -91,11 +96,13 @@ public class AltoClefSettings {
             return (_breakAvoiders.stream().anyMatch(pred -> pred.test(pos)));
         }
     }
+
     public boolean shouldAvoidPlacingAt(BlockPos pos) {
         synchronized (placeMutex) {
             return _placeAvoiders.stream().anyMatch(pred -> pred.test(pos));
         }
     }
+
     public boolean shouldAvoidPlacingAt(int x, int y, int z) {
         return shouldAvoidPlacingAt(new BlockPos(x, y, z));
     }
@@ -111,6 +118,7 @@ public class AltoClefSettings {
             return _forceAvoidWalkThrough.stream().anyMatch(pred -> pred.test(pos));
         }
     }
+
     public boolean shouldAvoidWalkThroughForce(int x, int y, int z) {
         return shouldAvoidWalkThroughForce(new BlockPos(x, y, z));
     }
@@ -138,22 +146,25 @@ public class AltoClefSettings {
             return _pauseInteractions;
         }
     }
-    public boolean isFlowingWaterPassAllowed() {
-        synchronized (propertiesMutex) {
-            return _allowFlowingWaterPass;
-        }
-    }
-    public boolean canSwimThroughLava() {
-        synchronized (propertiesMutex) {
-            return _allowSwimThroughLava;
-        }
-    }
 
     public void setInteractionPaused(boolean paused) {
         synchronized (propertiesMutex) {
             _pauseInteractions = paused;
         }
     }
+
+    public boolean isFlowingWaterPassAllowed() {
+        synchronized (propertiesMutex) {
+            return _allowFlowingWaterPass;
+        }
+    }
+
+    public boolean canSwimThroughLava() {
+        synchronized (propertiesMutex) {
+            return _allowSwimThroughLava;
+        }
+    }
+
     public void setFlowingWaterPass(boolean pass) {
         synchronized (propertiesMutex) {
             _allowFlowingWaterPass = pass;
@@ -182,32 +193,43 @@ public class AltoClefSettings {
     public HashSet<BlockPos> getBlocksToAvoidBreaking() {
         return _blocksToAvoidBreaking;
     }
+
     public List<Predicate<BlockPos>> getBreakAvoiders() {
         return _breakAvoiders;
     }
+
     public List<Predicate<BlockPos>> getPlaceAvoiders() {
         return _placeAvoiders;
     }
+
     public List<Predicate<BlockPos>> getForceWalkOnPredicates() {
         return _forceCanWalkOn;
     }
+
     public List<Predicate<BlockPos>> getForceAvoidWalkThroughPredicates() {
         return _forceAvoidWalkThrough;
     }
+
     public List<BiPredicate<BlockState, ItemStack>> getForceUseToolPredicates() {
         return _forceUseTool;
     }
-    public List<BiFunction<Double, BlockPos, Double>> getGlobalHeuristics() {return _globalHeuristics;}
+
+    public List<BiFunction<Double, BlockPos, Double>> getGlobalHeuristics() {
+        return _globalHeuristics;
+    }
 
     public boolean isItemProtected(Item item) {
         return _protectedItems.contains(item);
     }
+
     public HashSet<Item> getProtectedItems() {
         return _protectedItems;
     }
+
     public void protectItem(Item item) {
         _protectedItems.add(item);
     }
+
     public void stopProtectingItem(Item item) {
         _protectedItems.remove(item);
     }
@@ -215,9 +237,16 @@ public class AltoClefSettings {
     public Object getBreakMutex() {
         return breakMutex;
     }
+
     public Object getPlaceMutex() {
         return placeMutex;
     }
-    public Object getPropertiesMutex() {return propertiesMutex;}
-    public Object getGlobalHeuristicMutex() { return globalHeuristicMutex;}
+
+    public Object getPropertiesMutex() {
+        return propertiesMutex;
+    }
+
+    public Object getGlobalHeuristicMutex() {
+        return globalHeuristicMutex;
+    }
 }

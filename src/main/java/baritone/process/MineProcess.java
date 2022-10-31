@@ -18,7 +18,6 @@
 package baritone.process;
 
 import baritone.Baritone;
-import baritone.altoclef.AltoClefSettings;
 import baritone.api.pathing.goals.*;
 import baritone.api.process.IMineProcess;
 import baritone.api.process.PathingCommand;
@@ -74,84 +73,44 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         return filter != null;
     }
 
-    @Override
-    public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
-        if (desiredQuantity > 0) {
-            int curr = ctx.player().getInventory().items.stream()
-                    .filter(stack -> filter.has(stack))
-                    .mapToInt(ItemStack::getCount).sum();
-            System.out.println("Currently have " + curr + " valid items");
-            if (curr >= desiredQuantity) {
-                logDirect("Have " + curr + " valid items");
-                cancel();
-                return null;
-            }
-        }
-        if (calcFailed) {
-            if (!knownOreLocations.isEmpty() && Baritone.settings().blacklistClosestOnFailure.value) {
-                logDirect("Unable to find any path to " + filter + ", blacklisting presumably unreachable closest instance...");
-                if (Baritone.settings().notificationOnMineFail.value) {
-                    logNotification("Unable to find any path to " + filter + ", blacklisting presumably unreachable closest instance...", true);
+    private static List<BlockPos> prune(CalculationContext ctx, List<BlockPos> locs2, BlockOptionalMetaLookup filter, int max, List<BlockPos> blacklist, List<BlockPos> dropped) {
+        dropped.removeIf(drop -> {
+            for (BlockPos pos : locs2) {
+                if (pos.distSqr(drop) <= 9 && filter.has(ctx.get(pos.getX(), pos.getY(), pos.getZ())) && MineProcess.plausibleToBreak(ctx, pos)) { // TODO maybe drop also has to be supported? no lava below?
+                    return true;
                 }
-                knownOreLocations.stream().min(Comparator.comparingDouble(ctx.playerFeet()::distSqr)).ifPresent(blacklist::add);
-                knownOreLocations.removeIf(blacklist::contains);
-            } else {
-                logDirect("Unable to find any path to " + filter + ", canceling mine");
-                if (Baritone.settings().notificationOnMineFail.value) {
-                    logNotification("Unable to find any path to " + filter + ", canceling mine", true);
-                }
-                cancel();
-                return null;
             }
-        }
-        if (!Baritone.settings().allowBreak.value) {
-            logDirect("Unable to mine when allowBreak is false!");
-            cancel();
-            return null;
-        }
-        // Wait for pause interactions
-        if (AltoClefSettings.getInstance().isInteractionPaused()) {
-            return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
-        }
-        updateLoucaSystem();
-        int mineGoalUpdateInterval = Baritone.settings().mineGoalUpdateInterval.value;
-        List<BlockPos> curr = new ArrayList<>(knownOreLocations);
-        if (mineGoalUpdateInterval != 0 && tickCount++ % mineGoalUpdateInterval == 0) { // big brain
-            CalculationContext context = new CalculationContext(baritone, true);
-            Baritone.getExecutor().execute(() -> rescan(curr, context));
-        }
-        if (Baritone.settings().legitMine.value) {
-            addNearby();
-        }
-        Optional<BlockPos> shaft = curr.stream()
-                .filter(pos -> pos.getX() == ctx.playerFeet().getX() && pos.getZ() == ctx.playerFeet().getZ())
-                .filter(pos -> pos.getY() >= ctx.playerFeet().getY())
-                .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
-                .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
-        baritone.getInputOverrideHandler().clearAllKeys();
-        if (shaft.isPresent() && ctx.player().isOnGround()) {
-            BlockPos pos = shaft.get();
-            BlockState state = baritone.bsi.get0(pos);
-            if (!MovementHelper.avoidBreaking(baritone.bsi, pos.getX(), pos.getY(), pos.getZ(), state)) {
-                Optional<Rotation> rot = RotationUtils.reachable(ctx, pos);
-                if (rot.isPresent() && isSafeToCancel) {
-                    baritone.getLookBehavior().updateTarget(rot.get(), true);
-                    MovementHelper.switchToBestToolFor(ctx, ctx.world().getBlockState(pos));
-                    if (ctx.isLookingAt(pos) || ctx.playerRotations().isReallyCloseTo(rot.get())) {
-                        baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
+            return false;
+        });
+        List<BlockPos> locs = locs2
+                .stream()
+                .distinct()
+
+                // remove any that are within loaded chunks that aren't actually what we want
+                .filter(pos -> !ctx.bsi.worldContainsLoadedChunk(pos.getX(), pos.getZ()) || filter.has(ctx.get(pos.getX(), pos.getY(), pos.getZ())) || dropped.contains(pos))
+
+                // remove any that are implausible to mine (encased in bedrock, or touching lava)
+                .filter(pos -> MineProcess.plausibleToBreak(ctx, pos))
+
+                .filter(pos -> {
+                    if (Baritone.settings().allowOnlyExposedOres.value) {
+                        return isNextToAir(ctx, pos);
+                    } else {
+                        return true;
                     }
-                    return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
-                }
-            }
+                })
+
+                .filter(pos -> pos.getY() >= Baritone.settings().minYLevelWhileMining.value + ctx.world.dimensionType().minY())
+
+                .filter(pos -> !blacklist.contains(pos))
+
+                .sorted(Comparator.comparingDouble(ctx.getBaritone().getPlayerContext().player().blockPosition()::distSqr))
+                .collect(Collectors.toList());
+
+        if (locs.size() > max) {
+            return locs.subList(0, max);
         }
-        PathingCommand command = updateGoal();
-        if (command == null) {
-            // none in range
-            // maybe say something in chat? (ahem impact)
-            cancel();
-            return null;
-        }
-        return command;
+        return locs;
     }
 
 
@@ -247,6 +206,144 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         knownOreLocations = locs;
     }
 
+    public static boolean plausibleToBreak(CalculationContext ctx, BlockPos pos) {
+        if (MovementHelper.getMiningDurationTicks(ctx, pos.getX(), pos.getY(), pos.getZ(), ctx.bsi.get0(pos), true) >= COST_INF) {
+            return false;
+        }
+
+        // bedrock above and below makes it implausible, otherwise we're good
+        return !(ctx.bsi.get0(pos.above()).getBlock() == Blocks.BEDROCK && ctx.bsi.get0(pos.below()).getBlock() == Blocks.BEDROCK);
+    }
+
+    public static List<BlockPos> searchWorld(CalculationContext ctx, BlockOptionalMetaLookup filter, int max, List<BlockPos> alreadyKnown, List<BlockPos> blacklist, List<BlockPos> dropped) {
+        List<BlockPos> locs = new ArrayList<>();
+        List<Block> untracked = new ArrayList<>();
+        for (BlockOptionalMeta bom : filter.blocks()) {
+            Block block = bom.getBlock();
+            if (CachedChunk.BLOCKS_TO_KEEP_TRACK_OF.contains(block)) {
+                BetterBlockPos pf = ctx.baritone.getPlayerContext().playerFeet();
+
+                // maxRegionDistanceSq 2 means adjacent directly or adjacent diagonally; nothing further than that
+                locs.addAll(ctx.worldData.getCachedWorld().getLocationsOf(
+                        BlockUtils.blockToString(block),
+                        Baritone.settings().maxCachedWorldScanCount.value,
+                        pf.x,
+                        pf.z,
+                        2
+                ));
+            } else {
+                untracked.add(block);
+            }
+        }
+
+        locs = prune(ctx, locs, filter, max, blacklist, dropped);
+
+        if (!untracked.isEmpty() || (Baritone.settings().extendCacheOnThreshold.value && locs.size() < max)) {
+            locs.addAll(WorldScanner.INSTANCE.scanChunkRadius(
+                    ctx.getBaritone().getPlayerContext(),
+                    filter,
+                    max,
+                    10,
+                    32
+            )); // maxSearchRadius is NOT sq
+        }
+
+        locs.addAll(alreadyKnown);
+
+        return prune(ctx, locs, filter, max, blacklist, dropped);
+    }
+
+    public static boolean isNextToAir(CalculationContext ctx, BlockPos pos) {
+        int radius = Baritone.settings().allowOnlyExposedOresDistance.value;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -radius; dy <= radius; dy++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) <= radius
+                            && MovementHelper.isTransparent(ctx.getBlock(pos.getX() + dx, pos.getY() + dy, pos.getZ() + dz))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public PathingCommand onTick(boolean calcFailed, boolean isSafeToCancel) {
+        if (desiredQuantity > 0) {
+            int curr = ctx.player().getInventory().items.stream()
+                    .filter(stack -> filter.has(stack))
+                    .mapToInt(ItemStack::getCount).sum();
+            System.out.println("Currently have " + curr + " valid items");
+            if (curr >= desiredQuantity) {
+                logDirect("Have " + curr + " valid items");
+                cancel();
+                return null;
+            }
+        }
+        if (calcFailed) {
+            if (!knownOreLocations.isEmpty() && Baritone.settings().blacklistClosestOnFailure.value) {
+                logDirect("Unable to find any path to " + filter + ", blacklisting presumably unreachable closest instance...");
+                if (Baritone.settings().notificationOnMineFail.value) {
+                    logNotification("Unable to find any path to " + filter + ", blacklisting presumably unreachable closest instance...", true);
+                }
+                knownOreLocations.stream().min(Comparator.comparingDouble(ctx.playerFeet()::distSqr)).ifPresent(blacklist::add);
+                knownOreLocations.removeIf(blacklist::contains);
+            } else {
+                logDirect("Unable to find any path to " + filter + ", canceling mine");
+                if (Baritone.settings().notificationOnMineFail.value) {
+                    logNotification("Unable to find any path to " + filter + ", canceling mine", true);
+                }
+                cancel();
+                return null;
+            }
+        }
+        if (!Baritone.settings().allowBreak.value) {
+            logDirect("Unable to mine when allowBreak is false!");
+            cancel();
+            return null;
+        }
+        updateLoucaSystem();
+        int mineGoalUpdateInterval = Baritone.settings().mineGoalUpdateInterval.value;
+        List<BlockPos> curr = new ArrayList<>(knownOreLocations);
+        if (mineGoalUpdateInterval != 0 && tickCount++ % mineGoalUpdateInterval == 0) { // big brain
+            CalculationContext context = new CalculationContext(baritone, true);
+            Baritone.getExecutor().execute(() -> rescan(curr, context));
+        }
+        if (Baritone.settings().legitMine.value) {
+            addNearby();
+        }
+        Optional<BlockPos> shaft = curr.stream()
+                .filter(pos -> pos.getX() == ctx.playerFeet().getX() && pos.getZ() == ctx.playerFeet().getZ())
+                .filter(pos -> pos.getY() >= ctx.playerFeet().getY())
+                .filter(pos -> !(BlockStateInterface.get(ctx, pos).getBlock() instanceof AirBlock)) // after breaking a block, it takes mineGoalUpdateInterval ticks for it to actually update this list =(
+                .min(Comparator.comparingDouble(ctx.playerFeet()::distSqr));
+        baritone.getInputOverrideHandler().clearAllKeys();
+        if (shaft.isPresent() && ctx.player().isOnGround()) {
+            BlockPos pos = shaft.get();
+            BlockState state = baritone.bsi.get0(pos);
+            if (!MovementHelper.avoidBreaking(baritone.bsi, pos.getX(), pos.getY(), pos.getZ(), state)) {
+                Optional<Rotation> rot = RotationUtils.reachable(ctx, pos);
+                if (rot.isPresent() && isSafeToCancel) {
+                    baritone.getLookBehavior().updateTarget(rot.get(), true);
+                    MovementHelper.switchToBestToolFor(ctx, ctx.world().getBlockState(pos));
+                    if (ctx.isLookingAt(pos) || ctx.playerRotations().isReallyCloseTo(rot.get())) {
+                        baritone.getInputOverrideHandler().setInputForceState(Input.CLICK_LEFT, true);
+                    }
+                    return new PathingCommand(null, PathingCommandType.REQUEST_PAUSE);
+                }
+            }
+        }
+        PathingCommand command = updateGoal();
+        if (command == null) {
+            // none in range
+            // maybe say something in chat? (ahem impact)
+            cancel();
+            return null;
+        }
+        return command;
+    }
+
     private boolean internalMiningGoal(BlockPos pos, CalculationContext context, List<BlockPos> locs) {
         // Here, BlockStateInterface is used because the position may be in a cached chunk (the targeted block is one that is kept track of)
         if (locs.contains(pos)) {
@@ -301,26 +398,6 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         return new GoalBlock(loc.below());
     }
 
-    private static class GoalThreeBlocks extends GoalTwoBlocks {
-
-        public GoalThreeBlocks(BlockPos pos) {
-            super(pos);
-        }
-
-        @Override
-        public boolean isInGoal(int x, int y, int z) {
-            return x == this.x && (y == this.y || y == this.y - 1 || y == this.y - 2) && z == this.z;
-        }
-
-        @Override
-        public double heuristic(int x, int y, int z) {
-            int xDiff = x - this.x;
-            int yDiff = y - this.y;
-            int zDiff = z - this.z;
-            return GoalBlock.calculate(xDiff, yDiff < -1 ? yDiff + 2 : yDiff == -1 ? 0 : yDiff, zDiff);
-        }
-    }
-
     public List<BlockPos> droppedItemsScan() {
         if (!Baritone.settings().mineScanDroppedItems.value) {
             return Collections.emptyList();
@@ -336,44 +413,6 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         }
         ret.addAll(anticipatedDrops.keySet());
         return ret;
-    }
-
-    public static List<BlockPos> searchWorld(CalculationContext ctx, BlockOptionalMetaLookup filter, int max, List<BlockPos> alreadyKnown, List<BlockPos> blacklist, List<BlockPos> dropped) {
-        List<BlockPos> locs = new ArrayList<>();
-        List<Block> untracked = new ArrayList<>();
-        for (BlockOptionalMeta bom : filter.blocks()) {
-            Block block = bom.getBlock();
-            if (CachedChunk.BLOCKS_TO_KEEP_TRACK_OF.contains(block)) {
-                BetterBlockPos pf = ctx.baritone.getPlayerContext().playerFeet();
-
-                // maxRegionDistanceSq 2 means adjacent directly or adjacent diagonally; nothing further than that
-                locs.addAll(ctx.worldData.getCachedWorld().getLocationsOf(
-                        BlockUtils.blockToString(block),
-                        Baritone.settings().maxCachedWorldScanCount.value,
-                        pf.x,
-                        pf.z,
-                        2
-                ));
-            } else {
-                untracked.add(block);
-            }
-        }
-
-        locs = prune(ctx, locs, filter, max, blacklist, dropped);
-
-        if (!untracked.isEmpty() || (Baritone.settings().extendCacheOnThreshold.value && locs.size() < max)) {
-            locs.addAll(WorldScanner.INSTANCE.scanChunkRadius(
-                    ctx.getBaritone().getPlayerContext(),
-                    filter,
-                    max,
-                    10,
-                    32
-            )); // maxSearchRadius is NOT sq
-        }
-
-        locs.addAll(alreadyKnown);
-
-        return prune(ctx, locs, filter, max, blacklist, dropped);
     }
 
     private void addNearby() {
@@ -400,69 +439,24 @@ public final class MineProcess extends BaritoneProcessHelper implements IMinePro
         knownOreLocations = prune(new CalculationContext(baritone), knownOreLocations, filter, ORE_LOCATIONS_COUNT, blacklist, dropped);
     }
 
-    private static List<BlockPos> prune(CalculationContext ctx, List<BlockPos> locs2, BlockOptionalMetaLookup filter, int max, List<BlockPos> blacklist, List<BlockPos> dropped) {
-        dropped.removeIf(drop -> {
-            for (BlockPos pos : locs2) {
-                if (pos.distSqr(drop) <= 9 && filter.has(ctx.get(pos.getX(), pos.getY(), pos.getZ()))){// && MineProcess.plausibleToBreak(ctx, pos)) { // TODO maybe drop also has to be supported? no lava below?
-                    return true;
-                }
-            }
-            return false;
-        });
-        List<BlockPos> locs = locs2
-                .stream()
-                .distinct()
+    private static class GoalThreeBlocks extends GoalTwoBlocks {
 
-                // remove any that are within loaded chunks that aren't actually what we want
-                .filter(pos -> !ctx.bsi.worldContainsLoadedChunk(pos.getX(), pos.getZ()) || filter.has(ctx.get(pos.getX(), pos.getY(), pos.getZ())) || dropped.contains(pos))
-
-                // remove any that are implausible to mine (encased in bedrock, or touching lava)
-                //.filter(pos -> MineProcess.plausibleToBreak(ctx, pos))
-
-                .filter(pos -> {
-                    if (Baritone.settings().allowOnlyExposedOres.value) {
-                        return isNextToAir(ctx, pos);
-                    } else {
-                        return true;
-                    }
-                })
-
-                .filter(pos -> pos.getY() >= Baritone.settings().minYLevelWhileMining.value + ctx.world.dimensionType().minY())
-
-                .filter(pos -> !blacklist.contains(pos))
-
-                .sorted(Comparator.comparingDouble(ctx.getBaritone().getPlayerContext().player().blockPosition()::distSqr))
-                .collect(Collectors.toList());
-
-        if (locs.size() > max) {
-            return locs.subList(0, max);
-        }
-        return locs;
-    }
-
-    public static boolean isNextToAir(CalculationContext ctx, BlockPos pos) {
-        int radius = Baritone.settings().allowOnlyExposedOresDistance.value;
-        for (int dx = -radius; dx <= radius; dx++) {
-            for (int dy = -radius; dy <= radius; dy++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    if (Math.abs(dx) + Math.abs(dy) + Math.abs(dz) <= radius
-                            && MovementHelper.isTransparent(ctx.getBlock(pos.getX() + dx, pos.getY() + dy, pos.getZ() + dz))) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
-
-    public static boolean plausibleToBreak(CalculationContext ctx, BlockPos pos) {
-        if (MovementHelper.getMiningDurationTicks(ctx, pos.getX(), pos.getY(), pos.getZ(), ctx.bsi.get0(pos), true) >= COST_INF) {
-            return false;
+        public GoalThreeBlocks(BlockPos pos) {
+            super(pos);
         }
 
-        // bedrock above and below makes it implausible, otherwise we're good
-        return !(ctx.bsi.get0(pos.above()).getBlock() == Blocks.BEDROCK && ctx.bsi.get0(pos.below()).getBlock() == Blocks.BEDROCK);
+        @Override
+        public boolean isInGoal(int x, int y, int z) {
+            return x == this.x && (y == this.y || y == this.y - 1 || y == this.y - 2) && z == this.z;
+        }
+
+        @Override
+        public double heuristic(int x, int y, int z) {
+            int xDiff = x - this.x;
+            int yDiff = y - this.y;
+            int zDiff = z - this.z;
+            return GoalBlock.calculate(xDiff, yDiff < -1 ? yDiff + 2 : yDiff == -1 ? 0 : yDiff, zDiff);
+        }
     }
 
     @Override

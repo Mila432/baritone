@@ -21,8 +21,9 @@ import baritone.api.command.argument.IArgConsumer;
 import baritone.api.command.exception.CommandException;
 import baritone.api.pathing.goals.GoalBlock;
 import baritone.api.utils.BetterBlockPos;
-import java.util.stream.Stream;
 import net.minecraft.util.Mth;
+
+import java.util.stream.Stream;
 
 public enum RelativeGoalBlock implements IDatatypePost<GoalBlock, BetterBlockPos> {
     INSTANCE;

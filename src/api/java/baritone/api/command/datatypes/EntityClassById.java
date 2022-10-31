@@ -19,10 +19,11 @@ package baritone.api.command.datatypes;
 
 import baritone.api.command.exception.CommandException;
 import baritone.api.command.helpers.TabCompleteHelper;
-import java.util.stream.Stream;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
+
+import java.util.stream.Stream;
 
 public enum EntityClassById implements IDatatypeFor<EntityType> {
     INSTANCE;

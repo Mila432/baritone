@@ -21,11 +21,10 @@ import baritone.api.utils.accessor.IItemStack;
 import com.google.common.collect.ImmutableSet;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.*;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.PackType;
-import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.ServerPacksSource;
 import net.minecraft.server.packs.resources.ReloadableResourceManager;
@@ -42,6 +41,7 @@ import net.minecraft.world.level.storage.loot.PredicateManager;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
+
 import javax.annotation.Nonnull;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -52,13 +52,13 @@ import java.util.regex.Pattern;
 public final class BlockOptionalMeta {
 
     private final Block block;
-    private final Set<BlockState> blockstates;
+    private static LootTables manager;
     private final ImmutableSet<Integer> stateHashes;
     private final ImmutableSet<Integer> stackHashes;
     private static final Pattern pattern = Pattern.compile("^(.+?)(?::(\\d+))?$");
-    private static LootTables manager;
     private static PredicateManager predicate = new PredicateManager();
     private static Map<Block, List<Item>> drops = new HashMap<>();
+    private final Set<BlockState> blockstates;
 
     public BlockOptionalMeta(@Nonnull Block block) {
         this.block = block;
@@ -115,33 +115,6 @@ public final class BlockOptionalMeta {
         return block == this.block;
     }
 
-    public boolean matches(@Nonnull BlockState blockstate) {
-        Block block = blockstate.getBlock();
-        return block == this.block && stateHashes.contains(blockstate.hashCode());
-    }
-
-    public boolean matches(ItemStack stack) {
-        //noinspection ConstantConditions
-        int hash = ((IItemStack) (Object) stack).getBaritoneHash();
-
-        hash -= stack.getDamageValue();
-
-        return stackHashes.contains(hash);
-    }
-
-    @Override
-    public String toString() {
-        return String.format("BlockOptionalMeta{block=%s}", block);
-    }
-
-    public BlockState getAnyBlockState() {
-        if (blockstates.size() > 0) {
-            return blockstates.iterator().next();
-        }
-
-        return null;
-    }
-
     public static LootTables getManager() {
         if (manager == null) {
             PackRepository rpl = new PackRepository(PackType.SERVER_DATA, new ServerPacksSource());
@@ -185,5 +158,32 @@ public final class BlockOptionalMeta {
                 return items;
             }
         });
+    }
+
+    public boolean matches(@Nonnull BlockState blockstate) {
+        Block block = blockstate.getBlock();
+        return block == this.block && stateHashes.contains(blockstate.hashCode());
+    }
+
+    public boolean matches(ItemStack stack) {
+        //noinspection ConstantConditions
+        int hash = ((IItemStack) (Object) stack).getBaritoneHash();
+
+        hash -= stack.getDamageValue();
+
+        return stackHashes.contains(hash);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("BlockOptionalMeta{block=%s}", block);
+    }
+
+    public BlockState getAnyBlockState() {
+        if (blockstates.size() > 0) {
+            return blockstates.iterator().next();
+        }
+
+        return null;
     }
 }

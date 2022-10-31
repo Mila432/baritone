@@ -60,12 +60,12 @@ public class MixinMinecraft {
     @Inject(
             method = "tick",
             at = @At(
-            value = "FIELD",
-            opcode = Opcodes.GETFIELD,
-            target = "Lnet/minecraft/client/Minecraft;screen:Lnet/minecraft/client/gui/screens/Screen;",
-            ordinal = 4,
-            shift  = At.Shift.BY,
-            by = -3
+                    value = "FIELD",
+                    opcode = Opcodes.GETFIELD,
+                    target = "Lnet/minecraft/client/Minecraft;screen:Lnet/minecraft/client/gui/screens/Screen;",
+                    ordinal = 4,
+                    shift = At.Shift.BY,
+                    by = -3
             )
     )
     private void runTick(CallbackInfo ci) {

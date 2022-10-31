@@ -20,9 +20,13 @@ package baritone.cache;
 import baritone.Baritone;
 import baritone.api.cache.IWorldProvider;
 import baritone.api.utils.Helper;
+import net.minecraft.client.server.IntegratedServer;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.dimension.DimensionType;
+import net.minecraft.world.level.storage.LevelResource;
 import org.apache.commons.lang3.SystemUtils;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,11 +34,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
-import net.minecraft.client.server.IntegratedServer;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.dimension.DimensionType;
-import net.minecraft.world.level.storage.LevelResource;
 
 /**
  * @author Brady
@@ -98,14 +97,16 @@ public class WorldProvider implements IWorldProvider, Helper {
         try (FileOutputStream out = new FileOutputStream(readme.resolve("readme.txt").toFile())) {
             // good thing we have a readme
             out.write("https://github.com/cabaletta/baritone\n".getBytes());
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
 
         // We will actually store the world data in a subfolder: "DIM<id>"
         Path dir = getDimDir(worldKey, world.logicalHeight(), directory);
         if (!Files.exists(dir)) {
             try {
                 Files.createDirectories(dir);
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {
+            }
         }
 
         System.out.println("Baritone world data dir: " + dir);

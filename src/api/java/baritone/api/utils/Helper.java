@@ -18,13 +18,11 @@
 package baritone.api.utils;
 
 import baritone.api.BaritoneAPI;
-import baritone.api.utils.gui.BaritoneToast;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
-import java.awt.*;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.stream.Stream;

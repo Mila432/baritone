@@ -18,9 +18,6 @@
 package baritone.api.utils;
 
 import baritone.api.cache.IWorldData;
-import java.util.Optional;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
@@ -31,15 +28,23 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.Optional;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 /**
  * @author Brady
  * @since 11/12/2018
  */
 public interface IPlayerContext {
 
-    LocalPlayer player();
+    static double eyeHeight(boolean ifSneaking) {
+        return ifSneaking ? 1.27 : 1.62;
+    }
 
     IPlayerController playerController();
+
+    LocalPlayer player();
 
     Level world();
 
@@ -47,12 +52,12 @@ public interface IPlayerContext {
         return ((ClientLevel) world()).entitiesForRendering();
     }
 
+
+    IWorldData worldData();
+
     default Stream<Entity> entitiesStream() {
         return StreamSupport.stream(entities().spliterator(), false);
     }
-
-
-    IWorldData worldData();
 
     HitResult objectMouseOver();
 
@@ -72,7 +77,8 @@ public interface IPlayerContext {
             if (world().getBlockState(feet).getBlock() instanceof SlabBlock) {
                 return feet.above();
             }
-        } catch (NullPointerException ignored) {}
+        } catch (NullPointerException ignored) {
+        }
 
         return feet;
     }
@@ -87,10 +93,6 @@ public interface IPlayerContext {
 
     default Rotation playerRotations() {
         return new Rotation(player().getYRot(), player().getXRot());
-    }
-
-    static double eyeHeight(boolean ifSneaking) {
-        return ifSneaking ? 1.27 : 1.62;
     }
 
     /**

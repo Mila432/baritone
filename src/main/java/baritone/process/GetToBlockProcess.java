@@ -154,18 +154,14 @@ public final class GetToBlockProcess extends BaritoneProcessHelper implements IG
         return !newBlacklist.isEmpty();
     }
 
-    // this is to signal to MineProcess that we don't care about the allowBreak setting
-    // it is NOT to be used to actually calculate a path
-    public class GetToBlockCalculationContext extends CalculationContext {
-
-        public GetToBlockCalculationContext(boolean forUseOnAnotherThread) {
-            super(GetToBlockProcess.super.baritone, forUseOnAnotherThread);
+    private Goal createGoal(BlockPos pos) {
+        if (walkIntoInsteadOfAdjacent(gettingTo.getBlock())) {
+            return new GoalTwoBlocks(pos);
         }
-
-        @Override
-        public double breakCostMultiplierAt(int x, int y, int z, BlockState current) {
-            return 1;
+        if (blockOnTopMustBeRemoved(gettingTo.getBlock()) && MovementHelper.isBlockNormalCube(baritone.bsi.get0(pos.above()))) { // TODO this should be the check for chest openability
+            return new GoalBlock(pos.above());
         }
+        return new GoalGetToBlock(pos);
     }
 
     // safer than direct double comparison from distanceSq
@@ -197,16 +193,6 @@ public final class GetToBlockProcess extends BaritoneProcessHelper implements IG
         List<BlockPos> positions = MineProcess.searchWorld(context, new BlockOptionalMetaLookup(gettingTo), 64, known, blacklist, Collections.emptyList());
         positions.removeIf(blacklist::contains);
         knownLocations = positions;
-    }
-
-    private Goal createGoal(BlockPos pos) {
-        if (walkIntoInsteadOfAdjacent(gettingTo.getBlock())) {
-            return new GoalTwoBlocks(pos);
-        }
-        if (blockOnTopMustBeRemoved(gettingTo.getBlock()) && MovementHelper.isBlockNormalCube(baritone.bsi.get0(pos.above()))) { // TODO this should be the check for chest openability
-            return new GoalBlock(pos.above());
-        }
-        return new GoalGetToBlock(pos);
     }
 
     private boolean rightClick() {
@@ -244,6 +230,20 @@ public final class GetToBlockProcess extends BaritoneProcessHelper implements IG
             return false;
         }
         return block == Blocks.CRAFTING_TABLE || block == Blocks.FURNACE || block == Blocks.BLAST_FURNACE || block == Blocks.ENDER_CHEST || block == Blocks.CHEST || block == Blocks.TRAPPED_CHEST;
+    }
+
+    // this is to signal to MineProcess that we don't care about the allowBreak setting
+    // it is NOT to be used to actually calculate a path
+    public class GetToBlockCalculationContext extends CalculationContext {
+
+        public GetToBlockCalculationContext(boolean forUseOnAnotherThread) {
+            super(GetToBlockProcess.super.baritone, forUseOnAnotherThread);
+        }
+
+        @Override
+        public double breakCostMultiplierAt(int x, int y, int z, BlockState current) {
+            return 1;
+        }
     }
 
     private boolean blockOnTopMustBeRemoved(Block block) {

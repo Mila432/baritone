@@ -17,9 +17,10 @@
 
 package baritone.api.cache;
 
-import java.util.ArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.chunk.LevelChunk;
+
+import java.util.ArrayList;
 
 /**
  * @author Brady

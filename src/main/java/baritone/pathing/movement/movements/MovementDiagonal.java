@@ -29,15 +29,16 @@ import baritone.pathing.movement.MovementState;
 import baritone.utils.BlockStateInterface;
 import baritone.utils.pathing.MutableMoveResult;
 import com.google.common.collect.ImmutableSet;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 public class MovementDiagonal extends Movement {
 
@@ -54,58 +55,6 @@ public class MovementDiagonal extends Movement {
 
     private MovementDiagonal(IBaritone baritone, BetterBlockPos start, BetterBlockPos end, BetterBlockPos dir1, BetterBlockPos dir2) {
         super(baritone, start, end, new BetterBlockPos[]{dir1, dir1.above(), dir2, dir2.above(), end, end.above()});
-    }
-
-    @Override
-    protected boolean safeToCancel(MovementState state) {
-        //too simple. backfill does not work after cornering with this
-        //return MovementHelper.canWalkOn(ctx, ctx.playerFeet().down());
-        LocalPlayer player = ctx.player();
-        double offset = 0.25;
-        double x = player.position().x;
-        double y = player.position().y - 1;
-        double z = player.position().z;
-        //standard
-        if (ctx.playerFeet().equals(src)) {
-            return true;
-        }
-        //both corners are walkable
-        if (MovementHelper.canWalkOn(ctx, new BlockPos(src.x, src.y - 1, dest.z))
-                && MovementHelper.canWalkOn(ctx, new BlockPos(dest.x, src.y - 1, src.z))) {
-            return true;
-        }
-        //we are in a likely unwalkable corner, check for a supporting block
-        if (ctx.playerFeet().equals(new BetterBlockPos(src.x, src.y, dest.z))
-                || ctx.playerFeet().equals(new BetterBlockPos(dest.x, src.y, src.z))) {
-            return (MovementHelper.canWalkOn(ctx, new BetterBlockPos(x + offset, y, z + offset))
-                    || MovementHelper.canWalkOn(ctx, new BetterBlockPos(x + offset, y, z - offset))
-                    || MovementHelper.canWalkOn(ctx, new BetterBlockPos(x - offset, y, z + offset))
-                    || MovementHelper.canWalkOn(ctx, new BetterBlockPos(x - offset, y, z - offset)));
-        }
-        return true;
-    }
-
-    @Override
-    public double calculateCost(CalculationContext context) {
-        MutableMoveResult result = new MutableMoveResult();
-        cost(context, src.x, src.y, src.z, dest.x, dest.z, result);
-        if (result.y != dest.y) {
-            return COST_INF; // doesn't apply to us, this position is incorrect
-        }
-        return result.cost;
-    }
-
-    @Override
-    protected Set<BetterBlockPos> calculateValidPositions() {
-        BetterBlockPos diagA = new BetterBlockPos(src.x, src.y, dest.z);
-        BetterBlockPos diagB = new BetterBlockPos(dest.x, src.y, src.z);
-        if (dest.y < src.y) {
-            return ImmutableSet.of(src, dest.above(), diagA, diagB, dest, diagA.below(), diagB.below());
-        }
-        if (dest.y > src.y) {
-            return ImmutableSet.of(src, src.above(), diagA, diagB, dest, diagA.above(), diagB.above());
-        }
-        return ImmutableSet.of(src, dest, diagA, diagB);
     }
 
     public static void cost(CalculationContext context, int x, int y, int z, int destX, int destZ, MutableMoveResult res) {
@@ -241,6 +190,58 @@ public class MovementDiagonal extends Movement {
         }
         res.x = destX;
         res.z = destZ;
+    }
+
+    @Override
+    public double calculateCost(CalculationContext context) {
+        MutableMoveResult result = new MutableMoveResult();
+        cost(context, src.x, src.y, src.z, dest.x, dest.z, result);
+        if (result.y != dest.y) {
+            return COST_INF; // doesn't apply to us, this position is incorrect
+        }
+        return result.cost;
+    }
+
+    @Override
+    protected boolean safeToCancel(MovementState state) {
+        //too simple. backfill does not work after cornering with this
+        //return MovementHelper.canWalkOn(ctx, ctx.playerFeet().down());
+        LocalPlayer player = ctx.player();
+        double offset = 0.25;
+        double x = player.position().x;
+        double y = player.position().y - 1;
+        double z = player.position().z;
+        //standard
+        if (ctx.playerFeet().equals(src)) {
+            return true;
+        }
+        //both corners are walkable
+        if (MovementHelper.canWalkOn(ctx, new BlockPos(src.x, src.y - 1, dest.z))
+                && MovementHelper.canWalkOn(ctx, new BlockPos(dest.x, src.y - 1, src.z))) {
+            return true;
+        }
+        //we are in a likely unwalkable corner, check for a supporting block
+        if (ctx.playerFeet().equals(new BetterBlockPos(src.x, src.y, dest.z))
+                || ctx.playerFeet().equals(new BetterBlockPos(dest.x, src.y, src.z))) {
+            return (MovementHelper.canWalkOn(ctx, new BetterBlockPos(x + offset, y, z + offset))
+                    || MovementHelper.canWalkOn(ctx, new BetterBlockPos(x + offset, y, z - offset))
+                    || MovementHelper.canWalkOn(ctx, new BetterBlockPos(x - offset, y, z + offset))
+                    || MovementHelper.canWalkOn(ctx, new BetterBlockPos(x - offset, y, z - offset)));
+        }
+        return true;
+    }
+
+    @Override
+    protected Set<BetterBlockPos> calculateValidPositions() {
+        BetterBlockPos diagA = new BetterBlockPos(src.x, src.y, dest.z);
+        BetterBlockPos diagB = new BetterBlockPos(dest.x, src.y, src.z);
+        if (dest.y < src.y) {
+            return ImmutableSet.of(src, dest.above(), diagA, diagB, dest, diagA.below(), diagB.below());
+        }
+        if (dest.y > src.y) {
+            return ImmutableSet.of(src, src.above(), diagA, diagB, dest, diagA.above(), diagB.above());
+        }
+        return ImmutableSet.of(src, dest, diagA, diagB);
     }
 
     @Override

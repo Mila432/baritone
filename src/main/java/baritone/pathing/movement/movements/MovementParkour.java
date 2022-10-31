@@ -27,8 +27,6 @@ import baritone.pathing.movement.MovementHelper;
 import baritone.pathing.movement.MovementState;
 import baritone.utils.BlockStateInterface;
 import baritone.utils.pathing.MutableMoveResult;
-import java.util.HashSet;
-import java.util.Set;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -36,6 +34,9 @@ import net.minecraft.world.level.block.StairBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.material.WaterFluid;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class MovementParkour extends Movement {
 
@@ -110,7 +111,7 @@ public class MovementParkour extends Movement {
         for (int i = 2; i <= maxJump; i++) {
             int destX = x + xDiff * i;
             int destZ = z + zDiff * i;
-            
+
             // check head/feet
             if (!MovementHelper.fullyPassable(context, destX, y + 1, destZ)) {
                 break;
@@ -118,7 +119,7 @@ public class MovementParkour extends Movement {
             if (!MovementHelper.fullyPassable(context, destX, y + 2, destZ)) {
                 break;
             }
-            
+
             // check for ascend landing position
             BlockState destInto = context.bsi.get0(destX, y, destZ);
             if (!MovementHelper.fullyPassable(context.bsi.access, context.bsi.isPassableBlockPos.set(destX, y, destZ), destInto)) {
@@ -131,7 +132,7 @@ public class MovementParkour extends Movement {
                 }
                 break;
             }
-            
+
             // check for flat landing position
             BlockState landingOn = context.bsi.get0(destX, y - 1, destZ);
             // farmland needs to be canWalkOn otherwise farm can never work at all, but we want to specifically disallow ending a jump on farmland haha

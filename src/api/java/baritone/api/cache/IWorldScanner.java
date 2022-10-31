@@ -19,10 +19,11 @@ package baritone.api.cache;
 
 import baritone.api.utils.BlockOptionalMetaLookup;
 import baritone.api.utils.IPlayerContext;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Block;
+
+import java.util.List;
 
 /**
  * @author Brady

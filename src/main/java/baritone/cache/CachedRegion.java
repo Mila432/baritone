@@ -20,6 +20,10 @@ package baritone.cache;
 import baritone.Baritone;
 import baritone.api.cache.ICachedRegion;
 import baritone.api.utils.BlockUtils;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.dimension.DimensionType;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,9 +31,6 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.dimension.DimensionType;
 
 /**
  * @author Brady
@@ -166,7 +167,7 @@ public final class CachedRegion implements ICachedRegion {
                                 out.writeShort(entry.getValue().size());
                                 for (BlockPos pos : entry.getValue()) {
                                     out.writeByte((byte) (pos.getZ() << 4 | pos.getX()));
-                                    out.writeInt(pos.getY()-dimension.minY());
+                                    out.writeInt(pos.getY() - dimension.minY());
                                 }
                             }
                         }
@@ -271,7 +272,7 @@ public final class CachedRegion implements ICachedRegion {
                                     int X = xz & 0x0f;
                                     int Z = (xz >>> 4) & 0x0f;
                                     int Y = in.readInt();
-                                    locs.add(new BlockPos(X, Y+dimension.minY(), Z));
+                                    locs.add(new BlockPos(X, Y + dimension.minY(), Z));
                                 }
                             }
                         }

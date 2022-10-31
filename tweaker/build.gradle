@@ -134,7 +134,7 @@ jar {
 
     manifest {
         attributes(
-                'MixinConfigs': 'mixins.baritone.json',
+                'MixinConfigs': 'mixins.baritone-meteor.json',
                 "MixinConnector": "baritone.launch.BaritoneMixinConnector",
 
                 'Implementation-Title': 'Baritone',
@@ -148,8 +148,8 @@ remapJar {
 }
 
 task proguard(type: ProguardTask) {
-    url 'https://github.com/Guardsquare/proguard/releases/download/v7.3.0-beta2/proguard-7.3.0-beta2.zip'
-    extract 'proguard-7.3.0-beta2/lib/proguard.jar'
+    url 'https://github.com/Guardsquare/proguard/releases/download/v7.2.1/proguard-7.2.1.zip'
+    extract 'proguard-7.2.1/lib/proguard.jar'
     compType "OFFICIAL"
 }
 

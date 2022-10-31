@@ -18,7 +18,6 @@
 package baritone.pathing.movement;
 
 import baritone.Baritone;
-import baritone.altoclef.AltoClefSettings;
 import baritone.api.IBaritone;
 import baritone.api.pathing.movement.ActionCosts;
 import baritone.cache.WorldData;
@@ -93,7 +92,7 @@ public class CalculationContext {
         this.hasWaterBucket = Baritone.settings().allowWaterBucketFall.value && Inventory.isHotbarSlot(player.getInventory().findSlotMatchingItem(STACK_BUCKET_WATER)) && world.dimension() != Level.NETHER;
         this.canSprint = Baritone.settings().allowSprint.value && player.getFoodData().getFoodLevel() > 6;
         this.placeBlockCost = Baritone.settings().blockPlacementPenalty.value;
-        this.allowBreak = !AltoClefSettings.getInstance().isInteractionPaused() && Baritone.settings().allowBreak.value;
+        this.allowBreak = Baritone.settings().allowBreak.value;
         this.allowBreakAnyway = new ArrayList<>(Baritone.settings().allowBreakAnyway.value);
         this.allowParkour = Baritone.settings().allowParkour.value;
         this.allowParkourPlace = Baritone.settings().allowParkourPlace.value;
@@ -151,9 +150,6 @@ public class CalculationContext {
         if (!worldBorder.canPlaceAt(x, z)) {
             return COST_INF;
         }
-        if (AltoClefSettings.getInstance().shouldAvoidPlacingAt(x, y, z)) {
-            return COST_INF;
-        }
         return placeBlockCost;
     }
 
@@ -162,9 +158,6 @@ public class CalculationContext {
             return COST_INF;
         }
         if (isPossiblyProtected(x, y, z)) {
-            return COST_INF;
-        }
-        if (AltoClefSettings.getInstance().shouldAvoidBreaking(new BlockPos(x, y, z))) {
             return COST_INF;
         }
         return 1;

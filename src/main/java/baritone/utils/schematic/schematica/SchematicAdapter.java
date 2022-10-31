@@ -19,9 +19,10 @@ package baritone.utils.schematic.schematica;
 
 import baritone.api.schematic.IStaticSchematic;
 import com.github.lunatrius.schematica.client.world.SchematicWorld;
-import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.List;
 
 public final class SchematicAdapter implements IStaticSchematic {
 

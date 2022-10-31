@@ -35,9 +35,12 @@ import baritone.command.argument.CommandArguments;
 import baritone.command.manager.CommandManager;
 import baritone.utils.accessor.IGuiScreen;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.*;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.Tuple;
+
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -98,7 +101,8 @@ public class ExampleBaritoneControl implements Helper, AbstractGameEventListener
         } else if (msg.trim().equalsIgnoreCase("orderpizza")) {
             try {
                 ((IGuiScreen) mc.screen).openLinkInvoker(new URI("https://www.dominos.com/en/pages/order/"));
-            } catch (NullPointerException | URISyntaxException ignored) {}
+            } catch (NullPointerException | URISyntaxException ignored) {
+            }
             return false;
         }
         if (msg.isEmpty()) {
@@ -128,7 +132,8 @@ public class ExampleBaritoneControl implements Helper, AbstractGameEventListener
                     logRanCommand(command, rest);
                     try {
                         this.manager.execute(String.format("set %s %s", setting.getName(), argc.getString()));
-                    } catch (CommandNotEnoughArgumentsException ignored) {} // The operation is safe
+                    } catch (CommandNotEnoughArgumentsException ignored) {
+                    } // The operation is safe
                     return true;
                 }
             }

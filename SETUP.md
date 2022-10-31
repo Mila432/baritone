@@ -11,25 +11,36 @@ These releases are not always completely up to date with latest features, and ar
 
 Link to the releases page: [Releases](https://github.com/cabaletta/baritone/releases)
 
-v1.2.* is for 1.12.2, v1.3.* is for 1.13.2, v1.4.* is for 1.14.4, v1.5.* is for 1.15.2, v1.6.* is for 1.16.5, v1.7.* is for 1.17.1, v1.8.* is for 1.18.1
+v1.2.* is for 1.12.2, v1.3.* is for 1.13.2, v1.4.* is for 1.14.4, v1.5.* is for 1.15.2, v1.6.* is for 1.16.5, v1.7.* is
+for 1.17.1, v1.8.* is for 1.18.1
 
-Any official release will be GPG signed by leijurv (44A3EA646EADAC6A). Please verify that the hash of the file you download is in `checksums.txt` and that `checksums_signed.asc` is a valid signature by that public keys of `checksums.txt`. 
+Any official release will be GPG signed by leijurv (44A3EA646EADAC6A). Please verify that the hash of the file you
+download is in `checksums.txt` and that `checksums_signed.asc` is a valid signature by that public keys
+of `checksums.txt`.
 
-The build is fully deterministic and reproducible, and you can verify Travis did it properly by running `docker build --no-cache -t cabaletta/baritone .` yourself and comparing the shasum. This works identically on Travis, Mac, and Linux (if you have docker on Windows, I'd be grateful if you could let me know if it works there too).
+The build is fully deterministic and reproducible, and you can verify Travis did it properly by
+running `docker build --no-cache -t cabaletta/baritone .` yourself and comparing the shasum. This works identically on
+Travis, Mac, and Linux (if you have docker on Windows, I'd be grateful if you could let me know if it works there too).
 
 
 ## Artifacts
 
-Building Baritone will result in 5 artifacts created in the ``dist`` directory. These are the same as the artifacts created in the [releases](https://github.com/cabaletta/baritone/releases).
+Building Baritone will result in 5 artifacts created in the ``dist`` directory. These are the same as the artifacts
+created in the [releases](https://github.com/cabaletta/baritone/releases).
 
 **The Forge and Fabric releases can simply be added as a Forge/Fabric mods.**
 
-If another one of your Forge mods has a Baritone integration, you want `baritone-api-forge-VERSION.jar`. Otherwise, you want `baritone-standalone-forge-VERSION.jar`
+If another one of your Forge mods has a Baritone integration, you want `baritone-api-forge-VERSION.jar`. Otherwise, you
+want `baritone-standalone-forge-VERSION.jar`
 
-- **API**: Only the non-api packages are obfuscated. This should be used in environments where other mods would like to use Baritone's features.
-- **Forge/Fabric API**: Same as API, but packaged for Forge/Fabric. This should be used where another mod has a Baritone integration.
-- **Standalone**: Everything is obfuscated. This should be used in environments where there are no other mods present that would like to use Baritone's features.
-- **Forge/Fabric Standalone**: Same as Standalone, but packaged for Forge/Fabric. This should be used when Baritone is your only Forge/Fabric mod, or none of your other Forge/Fabric mods integrate with Baritone.
+- **API**: Only the non-api packages are obfuscated. This should be used in environments where other mods would like to
+  use Baritone's features.
+- **Forge/Fabric API**: Same as API, but packaged for Forge/Fabric. This should be used where another mod has a Baritone
+  integration.
+- **Standalone**: Everything is obfuscated. This should be used in environments where there are no other mods present
+  that would like to use Baritone's features.
+- **Forge/Fabric Standalone**: Same as Standalone, but packaged for Forge/Fabric. This should be used when Baritone is
+  your only Forge/Fabric mod, or none of your other Forge/Fabric mods integrate with Baritone.
 - **Unoptimized**: Nothing is obfuscated. This shouldn't be used ever in production.
 - **Forge/Fabric Unoptimized**: Same as Unoptimized, but packaged for Forge/Fabric.
 
@@ -41,13 +52,16 @@ If another one of your Forge mods has a Baritone integration, you want `baritone
 - Follow one of the instruction sets below, based on your preference
 
 ## Command Line
+
 On Mac OSX and Linux, use `./gradlew` instead of `gradlew`.
 
-If you have errors with a package missing please make sure you have setup your environment, and are using Oracle JDK 8 for 1.12.2-1.16.5, JDK 16 for 1.17.1, and JDK 17 for 1.18.1.
+If you have errors with a package missing please make sure you have setup your environment, and are using Oracle JDK 8
+for 1.12.2-1.16.5, JDK 16 for 1.17.1, and JDK 17 for 1.18.1.
 
-To check which java you are using do 
+To check which java you are using do
 `java -version` in a command prompt or terminal.
-If you are using anything above OpenJDK 8 for 1.12.2-1.16.5, it might not work because the Java distributions above JDK 8 using may not have the needed javax classes.
+If you are using anything above OpenJDK 8 for 1.12.2-1.16.5, it might not work because the Java distributions above JDK
+8 using may not have the needed javax classes.
 
 Open JDK download: https://openjdk.java.net/install/
 #### macOS guide
@@ -73,7 +87,7 @@ $ gradlew setupDecompWorkspace
 $ gradlew --refresh-dependencies
 ```
 
-Building Baritone: 
+Building Baritone:
 
 ```
 $ gradlew build

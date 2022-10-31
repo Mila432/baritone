@@ -20,10 +20,11 @@ package baritone.api.command.datatypes;
 import baritone.api.IBaritone;
 import baritone.api.command.exception.CommandException;
 import baritone.api.command.helpers.TabCompleteHelper;
-import java.util.List;
-import java.util.stream.Stream;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
+
+import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * An {@link IDatatype} used to resolve nearby players, those within
@@ -31,6 +32,10 @@ import net.minecraft.world.entity.player.Player;
  */
 public enum NearbyPlayer implements IDatatypeFor<Player> {
     INSTANCE;
+
+    private static List<? extends Player> getPlayers(IDatatypeContext ctx) {
+        return ctx.getBaritone().getPlayerContext().world().players();
+    }
 
     @Override
     public Player get(IDatatypeContext ctx) throws CommandException {
@@ -47,9 +52,5 @@ public enum NearbyPlayer implements IDatatypeFor<Player> {
                 .filterPrefix(ctx.getConsumer().getString())
                 .sortAlphabetically()
                 .stream();
-    }
-
-    private static List<? extends Player> getPlayers(IDatatypeContext ctx) {
-        return ctx.getBaritone().getPlayerContext().world().players();
     }
 }

@@ -18,7 +18,6 @@
 package baritone.gradle.task;
 
 import baritone.gradle.util.Determinizer;
-import org.apache.commons.io.IOUtils;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.TaskAction;
@@ -28,7 +27,6 @@ import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.internal.jvm.Jvm;
 
 import java.io.*;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,19 +47,19 @@ public class ProguardTask extends BaritoneGradleTask {
     @Input
     private String url;
 
-    public String getUrl() {
-        return url;
-    }
+    @Input
+    private String compType;
 
     @Input
     private String extract;
 
+    public String getUrl() {
+        return url;
+    }
+
     public String getExtract() {
         return extract;
     }
-
-    @Input
-    private String compType;
 
     public String getCompType() {
         return compType;
@@ -81,37 +79,33 @@ public class ProguardTask extends BaritoneGradleTask {
         cleanup();
     }
 
+    public void setCompType(String compType) {
+        this.compType = compType;
+    }
+
     private boolean isMcJar(File f) {
         return f.getName().startsWith(compType.equals("FORGE") ? "forge-" : "minecraft-") && f.getName().contains("minecraft-merged-named");
     }
 
     private File getMcJar() throws IOException {
         File mcClientJar = this.getProject().getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().findByName("main").getCompileClasspath().getFiles()
-            .stream()
-            .filter(this::isMcJar)
-            .map(f -> {
-                switch (compType) {
-                    case "OFFICIAL":
-                        return new File(f.getParentFile().getParentFile(), "minecraft-merged.jar");
-                    case "FABRIC":
-                        return new File(f.getParentFile().getParentFile(), "minecraft-merged-intermediary.jar");
-                    case "FORGE":
-                        return new File(f.getParentFile().getParentFile(), f.getName().replace("-named.jar", "-srg.jar"));
-                }
-                return null;
+                .stream()
+                .filter(this::isMcJar)
+                .map(f -> {
+                    switch (compType) {
+                        case "OFFICIAL":
+                            return new File(f.getParentFile().getParentFile(), "minecraft-merged.jar");
+                        case "FABRIC":
+                            return new File(f.getParentFile().getParentFile(), "minecraft-merged-intermediary.jar");
+                        case "FORGE":
+                            return new File(f.getParentFile().getParentFile(), f.getName().replace("-named.jar", "-srg.jar"));
+                    }
+                    return null;
                 })
-            .findFirst()
-            .get();
+                .findFirst()
+                .get();
         if (!mcClientJar.exists()) throw new IOException("Failed to find minecraft! " + mcClientJar.getAbsolutePath());
         return mcClientJar;
-    }
-
-    private void processArtifact() throws Exception {
-        if (Files.exists(this.artifactUnoptimizedPath)) {
-            Files.delete(this.artifactUnoptimizedPath);
-        }
-
-        Determinizer.determinize(this.artifactPath.toString(), this.artifactUnoptimizedPath.toString());
     }
 
     private void downloadProguard() throws Exception {
@@ -213,6 +207,14 @@ public class ProguardTask extends BaritoneGradleTask {
         return null;
     }
 
+    private void processArtifact() throws Exception {
+        if (Files.exists(this.artifactUnoptimizedPath)) {
+            Files.delete(this.artifactUnoptimizedPath);
+        }
+
+        Determinizer.determinize(this.artifactPath.toString(), this.artifactUnoptimizedPath.toString());
+    }
+
     private boolean validateJavaVersion(String java) {
         //TODO: fix for j16
 //        final JavaVersion javaVersion = new DefaultJvmVersionDetector(new DefaultExecActionFactory(new IdentityFileResolver())).getJavaVersion(java);
@@ -250,11 +252,11 @@ public class ProguardTask extends BaritoneGradleTask {
             {
                 // Discover all of the libraries that we will need to acquire from gradle
                 final Stream<File> dependencies = acquireDependencies()
-                    // remove MCP mapped jar, and nashorn
-                    .filter(f -> !f.toString().endsWith("-recomp.jar") && !f.getName().startsWith("nashorn") && !f.getName().startsWith("coremods"));
+                        // remove MCP mapped jar, and nashorn
+                        .filter(f -> !f.toString().endsWith("-recomp.jar") && !f.getName().startsWith("nashorn") && !f.getName().startsWith("coremods"));
 
                 libraries = dependencies
-                    .map(f -> isMcJar(f) ? mcJar : f);
+                        .map(f -> isMcJar(f) ? mcJar : f);
             }
             libraries.forEach(f -> {
                 template.add(2, "-libraryjars '" + f + "'");
@@ -267,29 +269,24 @@ public class ProguardTask extends BaritoneGradleTask {
         api.add(2, "-printmapping " + new File(this.getRootRelativeFile(PROGUARD_MAPPING_DIR).toFile(), "mappings-" + compType + "-api.txt"));
 
         // API config doesn't require any changes from the changes that we made to the template
-        Files.write(getTemporaryFile(compType+PROGUARD_API_CONFIG), api);
+        Files.write(getTemporaryFile(compType + PROGUARD_API_CONFIG), api);
 
         // For the Standalone config, don't keep the API package
         List<String> standalone = new ArrayList<>(template);
         standalone.removeIf(s -> s.contains("# this is the keep api"));
         standalone.add(2, "-printmapping " + new File(this.getRootRelativeFile(PROGUARD_MAPPING_DIR).toFile(), "mappings-" + compType + "-standalone.txt"));
-        Files.write(getTemporaryFile(compType+PROGUARD_STANDALONE_CONFIG), standalone);
+        Files.write(getTemporaryFile(compType + PROGUARD_STANDALONE_CONFIG), standalone);
     }
 
     private Stream<File> acquireDependencies() {
         return getProject().getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().findByName("main").getCompileClasspath().getFiles()
-            .stream()
-            .filter(File::isFile);
+                .stream()
+                .filter(File::isFile);
     }
 
     private void proguardApi() throws Exception {
-        runProguard(getTemporaryFile(compType+PROGUARD_API_CONFIG));
+        runProguard(getTemporaryFile(compType + PROGUARD_API_CONFIG));
         Determinizer.determinize(this.proguardOut.toString(), this.artifactApiPath.toString());
-    }
-
-    private void proguardStandalone() throws Exception {
-        runProguard(getTemporaryFile(compType+PROGUARD_STANDALONE_CONFIG));
-        Determinizer.determinize(this.proguardOut.toString(), this.artifactStandalonePath.toString());
     }
 
     private void cleanup() {
@@ -306,8 +303,9 @@ public class ProguardTask extends BaritoneGradleTask {
         this.extract = extract;
     }
 
-    public void setCompType(String compType) {
-        this.compType = compType;
+    private void proguardStandalone() throws Exception {
+        runProguard(getTemporaryFile(compType + PROGUARD_STANDALONE_CONFIG));
+        Determinizer.determinize(this.proguardOut.toString(), this.artifactStandalonePath.toString());
     }
 
     private void runProguard(Path config) throws Exception {
